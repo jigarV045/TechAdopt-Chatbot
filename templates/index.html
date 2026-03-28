@@ -1,0 +1,602 @@
+<<<<<<< HEAD
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Technology Adoption Analysis Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-icon {
+      width: 40px; height: 40px;
+      background: #0ea5e9;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    header h1 { font-size: 16px; font-weight: 600; color: #f1f5f9; }
+    header p  { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+    #reset-btn {
+      background: transparent;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    #reset-btn:hover { border-color: #0ea5e9; color: #0ea5e9; }
+
+    /* Chat area */
+    #chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    #chat-area::-webkit-scrollbar { width: 5px; }
+    #chat-area::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+    /* Welcome message */
+    .welcome {
+      text-align: center;
+      margin: auto;
+      max-width: 480px;
+      padding: 32px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+    }
+    .welcome h2 { font-size: 18px; color: #0ea5e9; margin-bottom: 10px; }
+    .welcome p  { font-size: 13px; color: #94a3b8; line-height: 1.7; }
+
+    /* Messages */
+    .message { display: flex; gap: 10px; max-width: 75%; }
+    .message.user { flex-direction: row-reverse; align-self: flex-end; }
+    .message.bot  { align-self: flex-start; }
+
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .message.user .avatar { background: #1e40af; }
+    .message.bot  .avatar { background: #0369a1; }
+    .message.error .avatar{ background: #7f1d1d; }
+
+    .bubble {
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+    .message.user  .bubble { background: #1e3a5f; border-top-right-radius: 2px; }
+    .message.bot   .bubble { background: #1e293b; border: 1px solid #334155; border-top-left-radius: 2px; }
+    .message.error .bubble { background: #1c1010; border: 1px solid #7f1d1d; color: #fca5a5; border-top-left-radius: 2px; }
+
+    /* Typing dots */
+    .dots { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
+    .dots span {
+      width: 7px; height: 7px;
+      background: #0ea5e9;
+      border-radius: 50%;
+      animation: bounce 1.2s ease-in-out infinite;
+    }
+    .dots span:nth-child(2) { animation-delay: 0.2s; }
+    .dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%,60%,100% { transform: translateY(0); }
+      30%          { transform: translateY(-6px); }
+    }
+
+    /* Input area */
+    #input-area {
+      padding: 16px 24px 20px;
+      background: #1e293b;
+      border-top: 1px solid #334155;
+    }
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 10px 14px;
+      transition: border-color 0.2s;
+    }
+    .input-row:focus-within { border-color: #0ea5e9; }
+
+    #user-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #e2e8f0;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      resize: none;
+      max-height: 120px;
+      line-height: 1.5;
+    }
+    #user-input::placeholder { color: #475569; }
+
+    #send-btn {
+      background: #0ea5e9;
+      border: none;
+      border-radius: 8px;
+      width: 36px; height: 36px;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s, transform 0.15s;
+      flex-shrink: 0;
+    }
+    #send-btn:hover:not(:disabled) { background: #0284c7; transform: scale(1.05); }
+    #send-btn:disabled { background: #334155; cursor: not-allowed; transform: none; }
+
+    .hint { font-size: 11px; color: #475569; margin-top: 8px; padding-left: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="header-left">
+    <div class="header-icon">🔬</div>
+    <div>
+      <h1>Technology Adoption Analysis Assistant</h1>
+      <p>Ask about frameworks, trends, barriers, digital transformation & more</p>
+    </div>
+  </div>
+  <button id="reset-btn" onclick="resetChat()">↺ Reset</button>
+</header>
+
+<!-- Chat -->
+<div id="chat-area">
+  <div class="welcome">
+    <h2>👋 Hello!</h2>
+    <p>I'm your Technology Adoption Analysis Assistant.<br/>
+    Ask me about <strong style="color:#38bdf8">TAM, DOI, UTAUT</strong>, digital transformation, adoption barriers, case studies, and more.</p>
+  </div>
+</div>
+
+<!-- Input -->
+<div id="input-area">
+  <div class="input-row">
+    <textarea id="user-input" rows="1" placeholder="Ask about technology adoption..."></textarea>
+    <button id="send-btn" onclick="sendMessage()">➤</button>
+  </div>
+  <div class="hint">Enter to send &nbsp;·&nbsp; Shift+Enter for new line</div>
+</div>
+
+<script>
+  const API = "http://localhost:5000";
+
+  // Auto-resize textarea
+  const ta = document.getElementById("user-input");
+  ta.addEventListener("input", () => {
+    ta.style.height = "auto";
+    ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
+  });
+  ta.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  async function sendMessage() {
+    const msg = ta.value.trim();
+    if (!msg) return;
+
+    removeWelcome();
+    addMessage("user", msg);
+    ta.value = "";
+    ta.style.height = "auto";
+    setLoading(true);
+
+    const typingId = showTyping();
+
+    try {
+      const res  = await fetch(`${API}/chat`, {
+        method : "POST",
+        headers: { "Content-Type": "application/json" },
+        body   : JSON.stringify({ message: msg })
+      });
+      const data = await res.json();
+      removeTyping(typingId);
+      if (data.reply) addMessage("bot", data.reply);
+      else            addMessage("error", data.error || "Unknown error");
+    } catch {
+      removeTyping(typingId);
+      addMessage("error", "Cannot connect to Python server.\nMake sure app.py is running on port 5000.");
+    }
+
+    setLoading(false);
+  }
+
+  async function resetChat() {
+    await fetch(`${API}/reset`, { method: "POST" });
+    document.getElementById("chat-area").innerHTML = "";
+    addMessage("bot", "Conversation reset! Ask me anything about technology adoption.");
+  }
+
+  // ── DOM helpers ───────────────────────────────────────────
+  function addMessage(type, text) {
+    const chat = document.getElementById("chat-area");
+    const div  = document.createElement("div");
+    div.className = `message ${type}`;
+
+    const av   = document.createElement("div");
+    av.className = "avatar";
+    av.textContent = type === "user" ? "👤" : type === "error" ? "⚠️" : "🤖";
+
+    const bub  = document.createElement("div");
+    bub.className = "bubble";
+    bub.textContent = text;
+
+    div.appendChild(av);
+    div.appendChild(bub);
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function showTyping() {
+    const chat = document.getElementById("chat-area");
+    const id   = "typing-" + Date.now();
+    const div  = document.createElement("div");
+    div.className = "message bot";
+    div.id = id;
+    div.innerHTML = `<div class="avatar">🤖</div>
+      <div class="bubble"><div class="dots"><span></span><span></span><span></span></div></div>`;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+    return id;
+  }
+
+  function removeTyping(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  function removeWelcome() {
+    const w = document.querySelector(".welcome");
+    if (w) w.remove();
+  }
+
+  function setLoading(state) {
+    document.getElementById("send-btn").disabled = state;
+    ta.disabled = state;
+  }
+</script>
+</body>
+=======
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Technology Adoption Analysis Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-icon {
+      width: 40px; height: 40px;
+      background: #0ea5e9;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    header h1 { font-size: 16px; font-weight: 600; color: #f1f5f9; }
+    header p  { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+    #reset-btn {
+      background: transparent;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    #reset-btn:hover { border-color: #0ea5e9; color: #0ea5e9; }
+
+    /* Chat area */
+    #chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    #chat-area::-webkit-scrollbar { width: 5px; }
+    #chat-area::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+    /* Welcome message */
+    .welcome {
+      text-align: center;
+      margin: auto;
+      max-width: 480px;
+      padding: 32px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+    }
+    .welcome h2 { font-size: 18px; color: #0ea5e9; margin-bottom: 10px; }
+    .welcome p  { font-size: 13px; color: #94a3b8; line-height: 1.7; }
+
+    /* Messages */
+    .message { display: flex; gap: 10px; max-width: 75%; }
+    .message.user { flex-direction: row-reverse; align-self: flex-end; }
+    .message.bot  { align-self: flex-start; }
+
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .message.user .avatar { background: #1e40af; }
+    .message.bot  .avatar { background: #0369a1; }
+    .message.error .avatar{ background: #7f1d1d; }
+
+    .bubble {
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+    .message.user  .bubble { background: #1e3a5f; border-top-right-radius: 2px; }
+    .message.bot   .bubble { background: #1e293b; border: 1px solid #334155; border-top-left-radius: 2px; }
+    .message.error .bubble { background: #1c1010; border: 1px solid #7f1d1d; color: #fca5a5; border-top-left-radius: 2px; }
+
+    /* Typing dots */
+    .dots { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
+    .dots span {
+      width: 7px; height: 7px;
+      background: #0ea5e9;
+      border-radius: 50%;
+      animation: bounce 1.2s ease-in-out infinite;
+    }
+    .dots span:nth-child(2) { animation-delay: 0.2s; }
+    .dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%,60%,100% { transform: translateY(0); }
+      30%          { transform: translateY(-6px); }
+    }
+
+    /* Input area */
+    #input-area {
+      padding: 16px 24px 20px;
+      background: #1e293b;
+      border-top: 1px solid #334155;
+    }
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 10px 14px;
+      transition: border-color 0.2s;
+    }
+    .input-row:focus-within { border-color: #0ea5e9; }
+
+    #user-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #e2e8f0;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      resize: none;
+      max-height: 120px;
+      line-height: 1.5;
+    }
+    #user-input::placeholder { color: #475569; }
+
+    #send-btn {
+      background: #0ea5e9;
+      border: none;
+      border-radius: 8px;
+      width: 36px; height: 36px;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s, transform 0.15s;
+      flex-shrink: 0;
+    }
+    #send-btn:hover:not(:disabled) { background: #0284c7; transform: scale(1.05); }
+    #send-btn:disabled { background: #334155; cursor: not-allowed; transform: none; }
+
+    .hint { font-size: 11px; color: #475569; margin-top: 8px; padding-left: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="header-left">
+    <div class="header-icon">🔬</div>
+    <div>
+      <h1>Technology Adoption Analysis Assistant</h1>
+      <p>Ask about frameworks, trends, barriers, digital transformation & more</p>
+    </div>
+  </div>
+  <button id="reset-btn" onclick="resetChat()">↺ Reset</button>
+</header>
+
+<!-- Chat -->
+<div id="chat-area">
+  <div class="welcome">
+    <h2>👋 Hello!</h2>
+    <p>I'm your Technology Adoption Analysis Assistant.<br/>
+    Ask me about <strong style="color:#38bdf8">TAM, DOI, UTAUT</strong>, digital transformation, adoption barriers, case studies, and more.</p>
+  </div>
+</div>
+
+<!-- Input -->
+<div id="input-area">
+  <div class="input-row">
+    <textarea id="user-input" rows="1" placeholder="Ask about technology adoption..."></textarea>
+    <button id="send-btn" onclick="sendMessage()">➤</button>
+  </div>
+  <div class="hint">Enter to send &nbsp;·&nbsp; Shift+Enter for new line</div>
+</div>
+
+<script>
+  const API = "http://localhost:5000";
+
+  // Auto-resize textarea
+  const ta = document.getElementById("user-input");
+  ta.addEventListener("input", () => {
+    ta.style.height = "auto";
+    ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
+  });
+  ta.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  async function sendMessage() {
+    const msg = ta.value.trim();
+    if (!msg) return;
+
+    removeWelcome();
+    addMessage("user", msg);
+    ta.value = "";
+    ta.style.height = "auto";
+    setLoading(true);
+
+    const typingId = showTyping();
+
+    try {
+      const res  = await fetch(`${API}/chat`, {
+        method : "POST",
+        headers: { "Content-Type": "application/json" },
+        body   : JSON.stringify({ message: msg })
+      });
+      const data = await res.json();
+      removeTyping(typingId);
+      if (data.reply) addMessage("bot", data.reply);
+      else            addMessage("error", data.error || "Unknown error");
+    } catch {
+      removeTyping(typingId);
+      addMessage("error", "Cannot connect to Python server.\nMake sure app.py is running on port 5000.");
+    }
+
+    setLoading(false);
+  }
+
+  async function resetChat() {
+    await fetch(`${API}/reset`, { method: "POST" });
+    document.getElementById("chat-area").innerHTML = "";
+    addMessage("bot", "Conversation reset! Ask me anything about technology adoption.");
+  }
+
+  // ── DOM helpers ───────────────────────────────────────────
+  function addMessage(type, text) {
+    const chat = document.getElementById("chat-area");
+    const div  = document.createElement("div");
+    div.className = `message ${type}`;
+
+    const av   = document.createElement("div");
+    av.className = "avatar";
+    av.textContent = type === "user" ? "👤" : type === "error" ? "⚠️" : "🤖";
+
+    const bub  = document.createElement("div");
+    bub.className = "bubble";
+    bub.textContent = text;
+
+    div.appendChild(av);
+    div.appendChild(bub);
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function showTyping() {
+    const chat = document.getElementById("chat-area");
+    const id   = "typing-" + Date.now();
+    const div  = document.createElement("div");
+    div.className = "message bot";
+    div.id = id;
+    div.innerHTML = `<div class="avatar">🤖</div>
+      <div class="bubble"><div class="dots"><span></span><span></span><span></span></div></div>`;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+    return id;
+  }
+
+  function removeTyping(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  function removeWelcome() {
+    const w = document.querySelector(".welcome");
+    if (w) w.remove();
+  }
+
+  function setLoading(state) {
+    document.getElementById("send-btn").disabled = state;
+    ta.disabled = state;
+  }
+</script>
+</body>
+>>>>>>> 4d45a2abc76d398761a06130fa50dc826292a36b
+</html>
