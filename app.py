@@ -3,70 +3,121 @@ from flask_cors import CORS
 from groq import Groq
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # ── CONFIG ──────────────────────────────────────────────────
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")  # paste your key here
-MODEL        = "llama-3.3-70b-versatile"
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+MODEL = "llama-3.3-70b-versatile"
+
+if not GROQ_API_KEY:
+    raise ValueError("GROQ_API_KEY is not set in environment variables")
+
 # ────────────────────────────────────────────────────────────
 
-app    = Flask(__name__)
+app = Flask(__name__)
 CORS(app)
+
 client = Groq(api_key=GROQ_API_KEY)
 
 SYSTEM_PROMPT = """
-You are an expert Technology Adoption Analysis Assistant.
+You are a Technology Adoption Analysis Assistant.
 
-GREETING RULE: If the user sends a greeting (e.g. "hi", "hello", "hey", "good morning",
-"how are you", etc.), respond warmly and professionally. Introduce yourself briefly as a
-Technology Adoption Analysis Assistant and invite them to ask a question. Do NOT treat
-greetings as off-topic.
+You ONLY answer questions related to:
+- Technology adoption frameworks (TAM, DOI, UTAUT, TOE)
+- Adoption barriers and drivers
+- Digital transformation
+- Technology trends (AI, IoT, Cloud, Blockchain)
+- Industry adoption (healthcare, finance, education)
+- Change management in technology
 
-You ONLY answer questions related to technology adoption, including:
-- Frameworks: TAM, DOI, UTAUT, TOE
-- Barriers and drivers of technology adoption
-- Digital transformation strategies
-- Tech adoption trends and statistics
-- Case studies (cloud, AI, IoT, blockchain, etc.)
-- Industry-specific adoption (healthcare, finance, education, etc.)
-- Change management related to technology adoption
+If the user message is NOT related to these topics AND NOT a greeting,
+respond EXACTLY with:
 
-STRICT RULE: If the message is NOT a greeting AND NOT related to any of the above topics,
-respond with exactly:
-"I'm sorry, I can only assist with questions related to technology
-adoption analysis. Please ask something relevant to that topic."
+"This question is outside my area of expertise. I can only help with technology adoption analysis."
 
-Never answer off-topic questions. Be professional and data-driven.
+If it is a greeting, respond warmly and introduce yourself.
+
+Do not answer anything outside your domain.
 """
 
+# ── MEMORY CONTROL ───────────────────────────────────────────
 conversation_history = []
+MAX_HISTORY = 10
+
+# ── HELPER FUNCTIONS ─────────────────────────────────────────
+
+def is_greeting(text):
+    greetings = ["hi", "hello", "hey", "good morning", "good evening", "how are you"]
+    return text.lower().strip() in greetings
+
+
+def is_tech_adoption_related(text):
+    keywords = [
+        "technology adoption", "tam", "doi", "utaut", "toe",
+        "digital transformation", "ai adoption", "cloud adoption",
+        "iot adoption", "blockchain adoption",
+        "barriers", "drivers", "innovation", "case study",
+        "fintech", "healthtech", "edtech"
+    ]
+    text = text.lower()
+    return any(keyword in text for keyword in keywords)
+
+# ── ROUTES ───────────────────────────────────────────────────
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    data       = request.json
+    data = request.get_json(silent=True) or {}
     user_input = data.get("message", "").strip()
 
     if not user_input:
         return jsonify({"error": "Empty message"}), 400
 
+    # ✅ Greeting Handling (No API call needed)
+    if is_greeting(user_input):
+        return jsonify({
+            "reply": "Hello! 👋 I'm your Technology Adoption Analysis Assistant. How can I help you today?"
+        })
+
+    # ✅ Topic Boundary Check (IMPORTANT 🔥)
+    if not is_tech_adoption_related(user_input):
+        return jsonify({
+            "reply": "This question is outside my area of expertise. I can only help with technology adoption analysis."
+        })
+
+    # ✅ Store user message
     conversation_history.append({"role": "user", "content": user_input})
 
-    response = client.chat.completions.create(
-        model    = MODEL,
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}] + conversation_history,
-        temperature = 0.4,
-        max_tokens  = 1024,
-    )
+    # ✅ Limit history
+    if len(conversation_history) > MAX_HISTORY:
+        conversation_history.pop(0)
 
-    reply = response.choices[0].message.content
+    try:
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}] + conversation_history,
+            temperature=0.4,
+            max_tokens=1024,
+        )
+
+        reply = response.choices[0].message.content
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    # ✅ Store assistant reply
     conversation_history.append({"role": "assistant", "content": reply})
 
     return jsonify({"reply": reply})
+
 
 @app.route("/reset", methods=["POST"])
 def reset():
     conversation_history.clear()
     return jsonify({"status": "Conversation reset"})
+
+
+# ── RUN SERVER ───────────────────────────────────────────────
 
 if __name__ == "__main__":
     print("Server running at http://localhost:5000")
